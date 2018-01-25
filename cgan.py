@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 from keras.models import Sequential, Model
-from keras.layers import Dense, Input
+from keras.layers import Dense, Input, concatenate
 from keras.layers import Reshape
 from keras.layers.core import Activation
 from keras.layers.normalization import BatchNormalization
@@ -43,7 +43,7 @@ def dataInit():
 	Y_noise_onehot = keras.utils.to_categorical(Y_noise, 10)
 
 	print('Random Noise Data: ', X_noise.shape)
-	return X_train, X_noise
+	return X_train, Y_train_onehot, X_noise, Y_noise_onehot
 
 def saveImage(imageData, imageName, epoch):
 	f, ax = plt.subplots(16, 8)
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 	decayIter = 100
 	lr = 0.0002
 
-	X_train, X_noise = dataInit()
+	X_train, Y_train, X_noise, Y_noise = dataInit()
 	raise SystemExit
 	X_train = X_train[:, np.newaxis, :, :]
 	numExamples = (X_train.shape)[0]
@@ -81,7 +81,11 @@ if __name__ == '__main__':
 	print('Generator Model')
 
 	generator = Sequential()
-	generator.add(Dense( input_dim=100, units=(128*7*7))) #initialization
+	g_noise = Input(shape=(100,))
+	g_label = Input(shape=(10,))
+	g_label_2 = Dense(units=50, activation='relu', kernel_initializer='glorot_normal')(g_label)
+	g_input = concatenate(g_noise, g_label_2)
+	generator.add(Dense(units=(128*7*7))(g_input)) #initialization
 	generator.add(Activation('relu'))
 	generator.add(Reshape((128, 7, 7)))
 	generator.add(UpSampling2D(size=(2, 2)))
@@ -90,7 +94,7 @@ if __name__ == '__main__':
 	generator.add(UpSampling2D(size=(2, 2)))
 	generator.add(Conv2D(1, (5, 5), padding='same'))
 	generator.add(Activation('tanh'))
-
+	
 	print('Discriminator Model')
 
 	discriminator = Sequential()
