@@ -67,7 +67,6 @@ if __name__ == '__main__':
 	lr = 0.0002
 
 	X_train, Y_train, X_noise, Y_noise = dataInit()
-	raise SystemExit
 	X_train = X_train[:, np.newaxis, :, :]
 	numExamples = (X_train.shape)[0]
 	numBatches = int(numExamples/float(batchSize))
@@ -80,11 +79,13 @@ if __name__ == '__main__':
 
 	print('Generator Model')
 
-	generator = Sequential()
 	g_noise = Input(shape=(100,))
 	g_label = Input(shape=(10,))
-	g_label_2 = Dense(units=50, activation='relu', kernel_initializer='glorot_normal')(g_label)
-	g_input = concatenate(g_noise, g_label_2)
+
+	generator = Sequential()
+	generator.add(Dense(units=50, activation='relu', kernel_initializer='glorot_normal')(g_label))
+
+	generator.add(concatenate([g_noise, g_label_2],axis=1))
 	generator.add(Dense(units=(128*7*7))(g_input)) #initialization
 	generator.add(Activation('relu'))
 	generator.add(Reshape((128, 7, 7)))
@@ -94,7 +95,7 @@ if __name__ == '__main__':
 	generator.add(UpSampling2D(size=(2, 2)))
 	generator.add(Conv2D(1, (5, 5), padding='same'))
 	generator.add(Activation('tanh'))
-	
+	print(generator.summary())
 	print('Discriminator Model')
 
 	discriminator = Sequential()
