@@ -82,41 +82,49 @@ if __name__ == '__main__':
 	g_noise = Input(shape=(100,))
 	g_label = Input(shape=(10,))
 
-	generator = Sequential()
-	generator.add(Dense(units=50, activation='relu', kernel_initializer='glorot_normal')(g_label))
+	g_label2 = Dense(units=50,activation='relu', kernel_initializer='glorot_normal')(g_label)
+	g_input = concatenate([g_noise, g_label2],axis=1)
 
-	generator.add(concatenate([g_noise, g_label_2],axis=1))
-	generator.add(Dense(units=(128*7*7))(g_input)) #initialization
-	generator.add(Activation('relu'))
-	generator.add(Reshape((128, 7, 7)))
-	generator.add(UpSampling2D(size=(2, 2)))
-	generator.add(Conv2D(64, (5, 5), padding="same"))
-	generator.add(Activation('relu'))		
-	generator.add(UpSampling2D(size=(2, 2)))
-	generator.add(Conv2D(1, (5, 5), padding='same'))
-	generator.add(Activation('tanh'))
-	print(generator.summary())
+	generator_ = Dense(units=(128*7*7))(g_input) #initialization
+	generator_ = Activation('relu')(generator_)
+	generator_ = Reshape((128, 7, 7))(generator_)
+	generator_ = UpSampling2D(size=(2, 2))(generator_)
+	generator_ = Conv2D(64, (5, 5), padding="same")(generator_)
+	generator_ = Activation('relu')(generator_)		
+	generator_ = UpSampling2D(size=(2, 2))(generator_)
+	generator_ = Conv2D(1, (5, 5), padding='same')(generator_)
+	generator_ = Activation('tanh')(generator_)
+
+	generator = Model(inputs=[g_noise, g_label],outputs=generator_)
 	print('Discriminator Model')
 
-	discriminator = Sequential()
-	discriminator.add(Conv2D(64, (5, 5), padding='same', strides=(2,2), input_shape=(1,28,28))) #initialization 
-	discriminator.add(LeakyReLU(0.2))
-	discriminator.add(Conv2D(128, (5, 5), padding='same', strides=(2,2)))
-	discriminator.add(LeakyReLU(0.2))
-	discriminator.add(Flatten())
-	discriminator.add(Dense(1))
-	discriminator.add(Activation('sigmoid'))
+	d_input_img = Input(shape=X_train.shape[1:])
+	d_input_label = Input(shape=[10])
+	d_input_label2 = Dense(28*28,activation='relu')(d_input_label)	
+	d_input_label2 = Reshape(X_train.shape[1:])(d_input_label2)
+	d_input = concatenate([d_input_img, d_input_label2])
+
+	discriminator_=  Conv2D(64, (5, 5), padding='same', strides=(2,2))(d_input) #initialization 
+	discriminator_ = LeakyReLU(0.2)(discriminator_)
+	discriminator_ = Conv2D(128, (5, 5), padding='same', strides=(2,2))(discriminator_)
+	discriminator_ = LeakyReLU(0.2)(discriminator_)
+	discriminator_ = Flatten()(discriminator_)
+	discriminator_ = Dense(1)(discriminator_)
+	discriminator_ = Activation('sigmoid')(discriminator_)
+	discriminator = Model(inputs=[d_input_img,d_input_label], outputs=discriminator_)
 	discriminator.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
 
 	discriminator.trainable = False
 
-	print('DCGAN model')
+	print('CGAN model')
 
-	dcganInput = Input(shape=(100,))
-	x = generator(dcganInput)
-	dcganOutput = discriminator(x)
-	dcgan = Model(inputs=dcganInput, outputs=dcganOutput)
-	dcgan.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+	gan_input_noise = Input(shape=(100,))
+	gan_input_label = Input(shape=(10,))
+	gan_input = concatenate([gan_input_noise, gan_input_label])
+	x = generator([gan_input_noise,gan_input_label])
+	cganOutput = discriminator([x, gan_input_label])
+	cgan = Model(inputs=[gan_input_noise, gan_input_label], outputs=cganOutput)
+	cgan.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
 
 	discriminator.trainable = True
 
